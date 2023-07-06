@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -6,6 +6,7 @@ from core.models import Evento
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
+from django.http.response import Http404
 
 
 # Create your views here.
@@ -65,7 +66,8 @@ def submit_evento(request):
 @login_required(login_url='/login/')
 def listaEventos(request):
     usuario = request.user
-    evento = Evento.objects.filter(usuario=usuario)
+    data_atual = datetime.now() - timedelta(hours=3)
+    evento = Evento.objects.filter(usuario=usuario, dataEvento__gt=data_atual)
     response = {'eventos': evento}
     return render(request, 'agenda.html', response)
 
@@ -77,7 +79,12 @@ def index(request):
 @login_required(login_url='/login/')
 def delete_evento(request, id_evento):
     usuario = request.user
-    evento = Evento.objects.get(id=id_evento)
+    try:
+        evento = Evento.objects.get(id=id_evento)
+    except Exception:
+        raise Http404()
     if usuario == evento.usuario:
         evento.delete()
+    else:
+        return Http404()
     return redirect('/')
